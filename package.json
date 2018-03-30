@@ -8,6 +8,7 @@
   "license": "MIT",
   "private": null,
   "dependencies": {
+    "fs": "^0.0.1-security",
     "mysql": "^2.15.0"
   }
 }

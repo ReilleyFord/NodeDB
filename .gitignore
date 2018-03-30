@@ -3,3 +3,4 @@ config.js
 mcExport.csv
 mcTab.txt
 node_modules
+*.txt
