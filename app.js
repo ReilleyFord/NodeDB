@@ -1,7 +1,7 @@
 const readline = require('readline');
 const mysql = require('mysql');
 const config = require('./config.js');
-const rf = require('./readFile.js');
+const rf = require('./modules/readFile.js');
 
 const table = 'Comics';
 const delimiter = '\t';
