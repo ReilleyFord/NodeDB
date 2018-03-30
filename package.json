@@ -1,0 +1,13 @@
+{
+  "name": "PallasIngestion",
+  "version": "0.0.1",
+  "description": "Ingestion scripts for CSV file",
+  "main": "app.js",
+  "repository": "https://www.github.com/ReilleyFord/DBIngestion",
+  "author": "Reilley Ford",
+  "license": "MIT",
+  "private": null,
+  "dependencies": {
+    "mysql": "^2.15.0"
+  }
+}
