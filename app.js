@@ -26,6 +26,14 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
+log = (logs) => {
+  const logger = fs.createWriteStream(logFile);
+  logger.on('error', function(e) { console.error(e); });
+  logs.forEach(line => {
+    logger.write(line + '\n');
+  });
+  logger.end();
+}
 
 /**
  * insertIntoDB function takes an object of records parsed from ./modules/readFile
@@ -38,32 +46,34 @@ insertIntoDB = (rows) => {
     if(err) throw err;
     let queries = [];
     let sql = '';
+    let logs = [];
     for(let value of rows) {
       sql = 'INSERT INTO '+table+ ' VALUES (NULL';
       values = value.split(delimiter);
       for (record of values) {
         if(record == 'False')
-          sql += ', ' + false
+          sql += ', ' + false;
         else if(record == 'True')
-          sql += ', ' + true
-        else if(isNaN(record))
-          sql += ', ' + '"' + record + '"';
+          sql += ', ' + true;
         else if(record === '' || record == ' ')
           sql += ', ' + null;
         else if(record == '\r')
-          sql += ');'
+          sql += ');';
+        else if(!isNaN(record))
+          sql += ', ' + record;
+        else if(isNaN(record))
+          sql += ', ' + '"' + record + '"';
         else
           sql += ', ' + null;
       }
       queries.push(sql);
     }
-    for(let i = 0; i < queries.length; i++){
+    for(let i = 0; i < queries.length; i++) {
       query = queries[i + 1];
       conn.query(query, (err, result) => {
-        let executedQuery = 'Query Executed: ' + queries[i];
-        let logs = [];
+        let executedQuery = 'Query Executed: ' + queries[i + 1];
         if (err) {
-          let skip = 'Skipping Query: ' + queries[i];
+          let skip = 'Skipping Query: ' + queries[i + 1];
           let error = 'Error: ' + err;
           logs.push(skip);
           logs.push(error);
@@ -71,15 +81,10 @@ insertIntoDB = (rows) => {
           console.log(error);
           i++;
         }
-        logs.push(executedQuery);
-        const logger = fs.createWriteStream(logFile);
-        logger.on('error', function(e) { console.error(e); });
-        logs.forEach(line => {
-          logger.write(line + '\n');
-        });
-        logger.end();
+        // logs.push(executedQuery);
       });
     }
+    // log(logs);
     conn.end();
   });
 }
