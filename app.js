@@ -4,10 +4,10 @@ const config = require('./config.js');
 const rf = require('./modules/readFile.js');
 const fs = require('fs');
 
-//database variables that can be changed to make it dynamic
-const table = 'Comics';
-const delimiter = '\t';
-const logFile = 'Executed_Queries_Log.txt';
+//variables needed from config file
+const table = config.DB_TABLE;
+const delimiter = config.DELIMITER;
+const logFile = config.LOG_FILE;
 
 //opening a connection to a MySQL db using node-mysql
 const conn = mysql.createConnection({
@@ -26,7 +26,12 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
+/**
+ * log function accepts a list of strings and writes each line to a txt file
+ **/
 log = (logs) => {
+  if(!fs.existsSync(logFile))
+    fs.mkdirSync(logFile);
   const logger = fs.createWriteStream(logFile);
   logger.on('error', function(e) { console.error(e); });
   logs.forEach(line => {
@@ -36,22 +41,50 @@ log = (logs) => {
 }
 
 /**
- * insertIntoDB function takes an object of records parsed from ./modules/readFile
- * it will format and build the sql queries and then execute all of them.
- * minor error handling will log each query executed and which ones it skips/errors out
- * also logs all queries and errors to log file.
+ * insertIntoDb function takes a list of insert statements and then opens a mysql
+ * connection and then executes each insert. It will also generate a log file of
+ * all the performed operations
  **/
-insertIntoDB = (rows) => {
+insertIntoDb = (queries) => {
   conn.connect((err) => {
+    for(let i = 0; i < queries.length; i++) {
+      query = queries[i + 1];
+      conn.query(query, (err, result) => {
+        let executedQuery = 'Query Executed: ' + queries[i + 1];
+        if (err) {
+          let skip = 'Skipping Query: ' + queries[i + 1];
+          let error = 'Error: ' + err;
+          logs.push(skip);
+          logs.push(error);
+          console.log(skip);
+          console.log(error);
+          i++;
+        }
+        logs.push(executedQuery);
+      });
+    }
+    log(logs);
+    conn.end();
+  });
+}
+
+/**
+ * generateQueries function takes a list of data delimited by new lines
+ * from ./modules/readFile.js, it then builds a insert statement based off of
+ * the records in each line.
+ **/
+generateQueries = (data) => {
     if(err) throw err;
     let queries = [];
     let sql = '';
     let logs = [];
-    for(let value of rows) {
+    for(let value of data) {
       sql = 'INSERT INTO '+table+ ' VALUES (NULL';
       values = value.split(delimiter);
       for (record of values) {
-        if(record == 'False')
+        if(record.indexOf('"') >= 0)
+          sql += ', ' + "'" + record + "'";
+        else if(record == 'False')
           sql += ', ' + false;
         else if(record == 'True')
           sql += ', ' + true;
@@ -68,25 +101,7 @@ insertIntoDB = (rows) => {
       }
       queries.push(sql);
     }
-    for(let i = 0; i < queries.length; i++) {
-      query = queries[i + 1];
-      conn.query(query, (err, result) => {
-        let executedQuery = 'Query Executed: ' + queries[i + 1];
-        if (err) {
-          let skip = 'Skipping Query: ' + queries[i + 1];
-          let error = 'Error: ' + err;
-          logs.push(skip);
-          logs.push(error);
-          console.log(skip);
-          console.log(error);
-          i++;
-        }
-        // logs.push(executedQuery);
-      });
-    }
-    // log(logs);
-    conn.end();
-  });
+    insertIntoDb(queries);
 }
 
 /**
@@ -95,6 +110,6 @@ insertIntoDB = (rows) => {
  **/
 rl.question('Enter file path: ', (answer) => {
   answer = answer.trim()
-  rf.readFile(answer, insertIntoDB)
+  rf.readFile(answer, generateQueries)
   rl.close();
 });
